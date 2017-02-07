@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="author" content="肖文斌">
+  <meta name="dcterms.date" content="2016-12-13">
+  <title>搜索结果聚类</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="reveal.js/css/reveal.css">
+  <style type="text/css">code{white-space: pre;}</style>
+  <link rel="stylesheet" href="reveal.js/css/theme/black.css" id="theme">
+  <!-- Printing and PDF exports -->
+  <script>
+    var link = document.createElement( 'link' );
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = window.location.search.match( /print-pdf/gi ) ? 'reveal.js/css/print/pdf.css' : 'reveal.js/css/print/paper.css';
+    document.getElementsByTagName( 'head' )[0].appendChild( link );
+  </script>
+  <!--[if lt IE 9]>
+  <script src="reveal.js/lib/js/html5shiv.js"></script>
+  <![endif]-->
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+<section>
+  <h1 class="title">搜索结果聚类</h1>
+  <p class="author">肖文斌</p>
+  <p class="date">12/13/2016</p>
+</section>
+
+<section><section id="简介" class="titleslide slide level1"><h1>简介</h1></section><section id="现状及问题" class="slide level2">
+<h2>现状及问题</h2>
+<ul>
+<li class="fragment">搜索引擎返回排序后的网页片段列表</li>
+<li class="fragment">用户从返回的大量结果中查找自己真正关心的内容</li>
+<li class="fragment">用户花费时间完成内容检索的后续工作</li>
+</ul>
+</section><section id="解决方案" class="slide level2">
+<h2>解决方案</h2>
+<ul>
+<li class="fragment">搜索引擎精度提高，排名算法更加智能</li>
+<li class="fragment">在有限的搜索引擎精度下，组织内容使其更加容易被用户浏览</li>
+<li class="fragment">大概思路，将搜索引擎返回的文档聚类后呈现给用户</li>
+</ul>
+</section><section id="限制条件之一" class="slide level2">
+<h2>限制条件之一</h2>
+<ul>
+<li class="fragment"><p>相关性</p>
+<p>聚类方法产生的结果必须能够将同用户查询相关的文档和不相关的文档分在不同的类别中</p></li>
+<li class="fragment"><p>易于浏览</p>
+<p>产生的聚类必须是更容易被用户浏览的，可以让用户快速的判断某个类别是否是自己感兴趣的，为此每个类别必须具有简介明了的描述</p></li>
+<li class="fragment"><p>重叠性</p>
+<p>不同聚类之间是相互重叠的，这是基于这样一个事实，一个文档往往会涉及到多个话题</p></li>
+</ul>
+</section><section id="限制条件之二" class="slide level2">
+<h2>限制条件之二</h2>
+<ul>
+<li class="fragment"><p>小量数据鲁棒性</p>
+<p>搜索引擎返回的结果只是对网页简单的介绍片段，如果在聚类时请求下载原网页数据，会带来极大的网络请求延时，是不可被用户接受的，因此聚类方法只能根据这些片段进行聚类分析，同时要保证聚类的质量</p></li>
+<li class="fragment"><p>增量算法</p>
+<p>搜索引擎不可能一次返回所有查询结果，需要发起多次请求，为了节省时间，请求查询结果跟进行聚类是并行的，因此要求聚类算法是增量的</p></li>
+</ul>
+</section></section>
+<section><section id="后缀树聚类---stc" class="titleslide slide level1"><h1>后缀树聚类 - STC</h1></section><section id="参考文献" class="slide level2">
+<h2>参考文献</h2>
+<p>主要参考了 Web Document Clustering: A Feasibility Demonstration <a href="http://homes.cs.washington.edu/~etzioni/papers/sigir98.pdf" class="uri">http://homes.cs.washington.edu/~etzioni/papers/sigir98.pdf</a></p>
+</section><section id="什么是trie树" class="slide level2">
+<h2>什么是Trie树？</h2>
+<p>由单词组bear, bell, bid, bull, buy, sell, stock, stop构造的Trie树</p>
+<figure>
+<img src="trie.png" />
+</figure>
+</section><section id="什么是后缀树---构造" class="slide level2">
+<h2>什么是后缀树 - 构造</h2>
+<p>单词banana的后缀树，将banana的所有后缀（banana, anana, nana, ana, na, a）插入到Trie树</p>
+<figure>
+<img src="trie_suffix.png" />
+</figure>
+</section><section id="什么是后缀树---压缩" class="slide level2">
+<h2>什么是后缀树 - 压缩</h2>
+<p>将上面的Trie树中只有一个子节点的内部节点合并到父节点中，就得到了一颗后缀树，也即后缀树是压缩后的Trie树</p>
+<figure>
+<img src="suffix_tree.png" />
+</figure>
+</section><section id="online后缀树构造方法" class="slide level2">
+<h2>Online后缀树构造方法</h2>
+<p>关于后缀的构造详见 Ukkonen's algorithm <a href="https://www.cs.helsinki.fi/u/ukkonen/SuffixT1withFigs.pdf" class="uri">https://www.cs.helsinki.fi/u/ukkonen/SuffixT1withFigs.pdf</a></p>
+</section><section id="用于聚类的后缀树" class="slide level2">
+<h2>用于聚类的后缀树</h2>
+<p>不同于常规后缀树以字符作为基本单位，用于文档聚类的后缀树以单词作为基本单位</p>
+<figure>
+<img src="suffix_tree_clustering.png" />
+</figure>
+</section><section id="后缀树聚类的优势" class="slide level2">
+<h2>后缀树聚类的优势</h2>
+<ul>
+<li class="fragment">增量的，可以跟查询请求同步进行</li>
+<li class="fragment">线性的，跟文档数量呈线性关系</li>
+</ul>
+</section></section>
+<section><section id="stc的实现" class="titleslide slide level1"><h1>STC的实现</h1></section><section id="步骤" class="slide level2">
+<h2>步骤</h2>
+<ul>
+<li class="fragment">文档清理</li>
+<li class="fragment">生成基类</li>
+<li class="fragment">合并基类</li>
+</ul>
+</section><section id="文档清理" class="slide level2">
+<h2>文档清理</h2>
+<ul>
+<li class="fragment">所谓文档，即搜索结果返回的网页片段</li>
+<li class="fragment">清理工作主要有，将单词转换为原型（比如复数转为单数），去除标点符号以及无效token</li>
+<li class="fragment">最终将文档转换为tokens</li>
+</ul>
+</section><section id="生成基类---步骤" class="slide level2">
+<h2>生成基类 - 步骤</h2>
+<ul>
+<li class="fragment">基类可以看成是对文档的初步聚类，之后还要进一步对基类进行聚类</li>
+<li class="fragment">基类聚类的本质可以看成是构建一个词汇短语到文档集合的索引表</li>
+<li class="fragment">基类聚类的过程就是构造后缀树的过程</li>
+</ul>
+</section><section id="生成基类---构造后缀树" class="slide level2">
+<h2>生成基类 - 构造后缀树</h2>
+<p>假设现在有三个文档，其内容分别为cat ate cheese, mouse ate cheese too, cat ate mouse too，基于这三个文档构造的后缀树如下</p>
+<figure>
+<img src="suffix_clustering.png" />
+</figure>
+<p>树的内部节点都对应有词汇短语，叶节点记录了文档id以及在后缀id，可以看出每棵子树都表示共享根节点短语的文档集合，也即基类</p>
+</section><section id="生成基类---图表展示" class="slide level2">
+<h2>生成基类 - 图表展示</h2>
+<p>基类的生成实质可以看成是短语到包含短语的文档集合的索引表，只不过在这里构造索引表时用到了线性增量的后缀树算法</p>
+<table>
+<tr>
+<td>
+<strong>节点</strong>
+</td>
+<td>
+<strong>短语</strong>
+</td>
+<td>
+<strong>文档集合</strong>
+</td>
+</tr>
+<tr>
+<td>
+a
+</td>
+<td>
+cat ate
+</td>
+<td>
+1,3
+</td>
+</tr>
+<tr>
+<td>
+b
+</td>
+<td>
+ate
+</td>
+<td>
+1,2,3
+</td>
+</tr>
+<tr>
+<td>
+c
+</td>
+<td>
+cheese
+</td>
+<td>
+1,2
+</td>
+</tr>
+<tr>
+<td>
+d
+</td>
+<td>
+mouse
+</td>
+<td>
+2,3
+</td>
+</tr>
+<tr>
+<td>
+e
+</td>
+<td>
+too
+</td>
+<td>
+2,3
+</td>
+</tr>
+<tr>
+<td>
+f
+</td>
+<td>
+ate cheese
+</td>
+<td>
+1,2
+</td>
+</tr>
+</table>
+</section><section id="生成基类---打分" class="slide level2">
+<h2>生成基类 - 打分</h2>
+<ul>
+<li class="fragment">为了便于后续对聚类进行排序，需要对基类进行打分</li>
+<li class="fragment"><p>打分公式如下：</p>
+<p>Score(BaseCluster)=len(BaseCluster)*len(Phrases)</p></li>
+</ul>
+</section><section id="合并基类" class="slide level2">
+<h2>合并基类</h2>
+<ul>
+<li class="fragment">利用图论知识来合并基类</li>
+<li class="fragment">合并操作基于文档集之间相似度的度量</li>
+</ul>
+</section><section id="合并基类---相似性度量" class="slide level2">
+<h2>合并基类 - 相似性度量</h2>
+<ul>
+<li class="fragment"><p>相似度度量公式十分直观，见下面的韦恩图</p>
+<figure>
+<img src="set.jpg" />
+</figure></li>
+<li class="fragment"><p>每个基类本质上是以文档id为内容的集合，度量集合相似性采用如下公式：</p>
+<pre><code>if len(A &amp; B) / len(A) &gt; threshold and len(A &amp; B) / len(B):
+    # 相似的
+else:
+    # 不相似的</code></pre></li>
+</ul>
+</section><section id="合并基类---合并" class="slide level2">
+<h2>合并基类 - 合并</h2>
+<ul>
+<li class="fragment">构造图，将各个文档集当做节点，将文档集相似性作为节点间是否存在边的度量</li>
+<li class="fragment"><p>图的连通子图对应合并后的聚类</p>
+<figure>
+<img src="clustering.png" />
+</figure></li>
+</ul>
+</section><section id="合并基类---小结" class="slide level2">
+<h2>合并基类 - 小结</h2>
+<p>从实验生成的连通子图可以发现两个特点：</p>
+<ul>
+<li class="fragment"><p>大多数文档集中在一个类别中，这是由于搜索引擎返回结果必然是跟用户查询相关的，因此大部分文档都在谈论同一话题</p></li>
+<li class="fragment"><p>基于连通子图来构造聚类隐含了一个假设，集合之间相似性具有传递性</p></li>
+<li class="fragment"><p>我的主要工作围绕数据的这两个特点展开</p></li>
+</ul>
+</section></section>
+<section><section id="相似性改进" class="titleslide slide level1"><h1>相似性改进</h1></section><section id="相似性传递---合理性判断" class="slide level2">
+<h2>相似性传递 - 合理性判断</h2>
+<p>当A文档跟B文档相似，且B文档跟C文档相似时，我们能否判断A文档跟C文档也相似</p>
+<figure>
+<img src="silimar2.png" />
+</figure>
+</section><section id="相似性传递---有效" class="slide level2">
+<h2>相似性传递 - 有效</h2>
+<p>显然在下图中当相似性构成一个回路时，相似性传递必然是有效的</p>
+<figure>
+<img src="silimar1.png" />
+</figure>
+</section><section id="相似性传递---无效" class="slide level2">
+<h2>相似性传递 - 无效</h2>
+<p>举个例子，python这个单词既可以指一门语言，又可以指动物蟒蛇。当搜索结果中包含的文档既有讲python语言的，也有讲蟒蛇的，同时又有讲python语言命名的历史渊源。显然介绍python语言命名历史渊源的文档将会为python语言和蟒蛇搭建相似性桥梁，这必然是错误的</p>
+<figure>
+<img src="silimar.png" />
+</figure>
+</section><section id="相似性传递---改进" class="slide level2">
+<h2>相似性传递 - 改进</h2>
+<p>将图中关节点的边去掉后，再求连通子图</p>
+</section></section>
+<section><section id="新的合并基类算法" class="titleslide slide level1"><h1>新的合并基类算法</h1></section><section id="搜索结果数据分布---单集中趋势" class="slide level2">
+<h2>搜索结果数据分布 - 单集中趋势</h2>
+<p>从直观上来看，搜索结果必然是跟用户检索相关的，也即大部分返回内容是用户关心的，此外不排除搜索引擎返回其他弱相关或者无关内容。也即大部分结果最终应该被划分到同一个分类下面</p>
+<figure>
+<img src="plot1.png" />
+</figure>
+<p><strong>注：</strong>以上只是个人直观猜想，还需要检索大量文档来验证这个猜想</p>
+</section><section id="搜索结果数据分布---多集中趋势" class="slide level2">
+<h2>搜索结果数据分布 - 多集中趋势</h2>
+<p>从直观上来看，还有一种典型的情况，当用户本身输入的查询就具有歧义时，显然搜索引擎返回的结果显然会呈现出多集中趋势</p>
+<figure>
+<img src="plot2.png" />
+</figure>
+<p><strong>注：</strong>以上只是个人直观猜想，还需要检索大量文档来验证这个猜想</p>
+</section><section id="搜索结果数据分布---混合集中趋势" class="slide level2">
+<h2>搜索结果数据分布 - 混合集中趋势</h2>
+<p>一个文档往往会涉及到多个话题，因为同一份文档常常可以同时属于不同的类别</p>
+<figure>
+<img src="plot3.png" />
+</figure>
+</section><section id="k-base合并基类" class="slide level2">
+<h2>K-Base合并基类</h2>
+<p>参考文献采用的思路是将类似的文档集进行归类，如果反过来理解就是，每个文档集必定有一个文档集的基，见下例子：</p>
+<pre><code># 三个文档集
+(1, 1, 0, 1, 0, 1, 0)
+(0, 1, 0, 1, 1, 1, 0)
+(0, 0, 1, 1, 0, 1, 0)
+# 对应的文档基
+(0, 0, 0, 1, 0, 1, 0)</code></pre>
+</section><section id="实现k-base算法---伪代码" class="slide level2">
+<h2>实现K-Base算法 - 伪代码</h2>
+<pre><code>从doc_set_list中找出汉明距离最近的两个文档集doc_set1, doc_set2
+    doc_base = doc_set1 &amp; doc_set2
+    将doc_set1和doc_set2从doc_set_list中移除
+    将doc_base加入到doc_set_list中
+    更新文档集跟文档基的对应关系
+
+    如果doc_set_list中所有文档集含有1的个数小于等于K，则break
+    否则，继续处理</code></pre>
+</section></section>
+<section><section id="thank-you" class="titleslide slide level1"><h1>Thank You!</h1></section></section>
+    </div>
+  </div>
+
+  <script src="reveal.js/lib/js/head.min.js"></script>
+  <script src="reveal.js/js/reveal.js"></script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+
+        // Optional reveal.js plugins
+        dependencies: [
+          { src: 'reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'reveal.js/plugin/zoom-js/zoom.js', async: true },
+              { src: 'reveal.js/plugin/notes/notes.js', async: true }
+        ]
+      });
+    </script>
+    </body>
+</html>
